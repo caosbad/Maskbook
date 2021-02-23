@@ -1,7 +1,11 @@
 import {
     Box,
+    Button,
+    Card,
+    CardContent,
     IconButton,
     makeStyles,
+    Skeleton,
     Table,
     TableBody,
     TableCell,
@@ -73,7 +77,9 @@ export interface WalletAssetsTableProps extends withClasses<KeysInferFromUseStyl
 export function WalletAssetsTable(props: WalletAssetsTableProps) {
     const { t } = useI18N()
     const { wallet } = props
-    const { detailedTokens, stableCoinTokens } = useContext(DashboardWalletsContext)
+    const { detailedTokens, detailedTokensLoading, detailedTokensRetry, stableTokens } = useContext(
+        DashboardWalletsContext,
+    )
 
     const classes = useStylesExtends(useStyles(), props)
     const LABELS = [t('wallet_assets'), t('wallet_price'), t('wallet_balance'), t('wallet_value'), ''] as const
@@ -82,7 +88,51 @@ export function WalletAssetsTable(props: WalletAssetsTableProps) {
     const [more, setMore] = useState(false)
     const [price, setPrice] = useState(MIN_VALUE)
 
-    if (!detailedTokens.length) return null
+    if (detailedTokensLoading)
+        return (
+            <Box className={classes.container} sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Skeleton
+                    animation="wave"
+                    variant="rectangular"
+                    width="100%"
+                    height={55}
+                    style={{ marginTop: 16, marginBottom: 8 }}></Skeleton>
+                <Skeleton
+                    animation="wave"
+                    variant="rectangular"
+                    width="100%"
+                    height={55}
+                    style={{ marginBottom: 8 }}></Skeleton>
+                <Skeleton
+                    animation="wave"
+                    variant="rectangular"
+                    width="100%"
+                    height={55}
+                    style={{ marginBottom: 8 }}></Skeleton>
+            </Box>
+        )
+
+    if (!detailedTokens.length)
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                }}>
+                <Typography color="textSecondary">No token found.</Typography>
+                <Button
+                    sx={{
+                        marginTop: 1,
+                    }}
+                    variant="text"
+                    onClick={() => detailedTokensRetry()}>
+                    Retry
+                </Button>
+            </Box>
+        )
 
     const viewDetailed = (x: AssetDetailed) => (
         <TableRow className={classes.cell} key={x.token.address}>
@@ -114,7 +164,7 @@ export function WalletAssetsTable(props: WalletAssetsTableProps) {
                         {new BigNumber(
                             formatBalance(new BigNumber(x.balance), x.token.decimals ?? 0, x.token.decimals ?? 0),
                         ).toFixed(
-                            stableCoinTokens.some((y: ERC20TokenDetailed) => isSameAddress(y.address, x.token.address))
+                            stableTokens.some((y: ERC20TokenDetailed) => isSameAddress(y.address, x.token.address))
                                 ? 2
                                 : 6,
                         )}
@@ -147,14 +197,15 @@ export function WalletAssetsTable(props: WalletAssetsTableProps) {
     )
 
     const LessButton = () => (
-        <div
-            className={classes.lessButton}
-            onClick={() => {
-                setMore(!more)
-                setViewLength(more ? MAX_TOKENS_LENGTH : detailedTokens.length)
-                setPrice(more ? MIN_VALUE : 0)
-            }}>
-            <IconButton>{more ? <ExpandLessIcon /> : <ExpandMoreIcon />}</IconButton>
+        <div className={classes.lessButton}>
+            <IconButton
+                onClick={() => {
+                    setMore(!more)
+                    setViewLength(more ? MAX_TOKENS_LENGTH : detailedTokens.length)
+                    setPrice(more ? MIN_VALUE : 0)
+                }}>
+                {more ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
         </div>
     )
 
